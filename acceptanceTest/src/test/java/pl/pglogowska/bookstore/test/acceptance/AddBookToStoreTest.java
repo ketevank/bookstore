@@ -4,16 +4,35 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.squareup.okhttp.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import pl.pglogowska.bookstore.application.Application;
 
 import java.io.IOException;
+import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AddBookToStoreTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    public static final OkHttpClient OK_HTTP_CLIENT = new OkHttpClient();
+    private static final OkHttpClient OK_HTTP_CLIENT = new OkHttpClient();
+    private static final ExecutorService executors = Executors.newFixedThreadPool(1);
+
+
+    @BeforeClass
+    public static void setup() throws ExecutionException, InterruptedException {
+        Future<?> submit = executors.submit(() -> {
+            try {
+                Application.main(new String[]{});
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        });
+        submit.get();
+    }
 
     @Test
     public void addBookToStore() throws IOException {
@@ -34,12 +53,18 @@ public class AddBookToStoreTest {
 
         // when
         Response response = OK_HTTP_CLIENT.newCall(new Request.Builder()
-                .url("http://localhost:8080/book/")
+                .url("http://localhost:8080/book/" + isbn)
                 .put(RequestBody.create(MediaType.parse("appllication/json"), jsonValue))
                 .build()).execute();
         // then
         assertThat(response.code()).isEqualTo(200);
         JsonNode responseTree = OBJECT_MAPPER.readTree(response.body().bytes());
-        assertThat(responseTree.get("id")).size().isGreaterThan(0);
+        assertThat(responseTree.get("id")).isEqualTo(isbn);
+    }
+
+    @AfterClass
+    public static void cleanup() throws InterruptedException {
+        executors.shutdownNow();
+        executors.awaitTermination(1, TimeUnit.MINUTES);
     }
 }
