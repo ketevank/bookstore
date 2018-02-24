@@ -54,12 +54,12 @@ public class AddBookToStoreTest {
         // when
         Response response = OK_HTTP_CLIENT.newCall(new Request.Builder()
                 .url("http://localhost:8080/book/" + isbn)
-                .put(RequestBody.create(MediaType.parse("appllication/json"), jsonValue))
+                .put(RequestBody.create(MediaType.parse("application/json"), jsonValue))
                 .build()).execute();
         // then
         assertThat(response.code()).isEqualTo(200);
         JsonNode responseTree = OBJECT_MAPPER.readTree(response.body().bytes());
-        assertThat(responseTree.get("id")).isEqualTo(isbn);
+        assertThat(responseTree.get("id").asText()).isEqualTo(isbn);
     }
 
     @AfterClass
